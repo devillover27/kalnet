@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        String   @default("student") // "student" | "educator"
+  avatar      String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  studyDates    StudyDate[]
+  courses       Course[]       @relation("EducatorCourses")
+  enrollments   Enrollment[]
+}
+
+model StudyDate {
+  id        String   @id @default(uuid())
+  userId    String
+  date      String   // "YYYY-MM-DD"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model Course {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  category        String
+  thumbnailUrl    String?
+  educatorId      String
+  createdAt       DateTime @default(now())
+
+  educator    User         @relation("EducatorCourses", fields: [educatorId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+  enrollments Enrollment[]
+}
+
+model Lesson {
+  id        String  @id @default(uuid())
+  courseId   String
+  title     String
+  videoUrl  String
+  order     Int     @default(0)
+  duration  Int?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  studentId  String
+  courseId    String
+  progress   Float    @default(0)
+  enrolledAt DateTime @default(now())
+
+  student          User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course           Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  completedLessons CompletedLesson[]
+
+  @@unique([studentId, courseId])
+}
+
+model CompletedLesson {
+  id           String   @id @default(uuid())
+  enrollmentId String
+  lessonId     String
+  completedAt  DateTime @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+}
